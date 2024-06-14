@@ -135,6 +135,10 @@ export class Intquant {
         return compressedData;
     }
 
+    static compressedDataToJSON(compressedData: IntquantCompressedData): string {
+        return JSON.stringify({ compressedData: compressedData }).replace(/,/g, ',\n');
+    }
+
     static decodeAndDecompressBase64String(compressedString: string): Uint8Array {
         // Decode Base64 string back to binary data
         const compressedData = Buffer.from(compressedString, 'base64');

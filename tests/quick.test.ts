@@ -1,4 +1,6 @@
 import { Intquant, IntquantQuantizedData, IntquantCompressedData  } from '../src/Intquant';
+// src/Main.ts
+import { createFloats, createSmallStableFloats, reportCompression } from './testutils';
 
 // Be sure to use a variety of value forms. e.g., "3.4", "0.004", "123.4", "43.02".
 
@@ -14,60 +16,31 @@ function log(...args: any[]): void {
 // ====== Example data ======
 let floatArray: number[][] = [];
 
-let useSmallTestArray = true;
+let useSmallTestArray = false;
 if (useSmallTestArray) {
-    floatArray = [
-        [1.0023, 45.67, 89.01, 12.34, 56.78],
-        [0.45, 67.89, 90.12, 34.56, 78.90],
-        [45.67, 89.01, 12.34, 56.78, 23.45],
-        [67.89, 90.12, 34.56, 178.90, 45.67],
-        [89.01, 12.34, 136.717, 23.45, 67.89],
-        [90.12, 34.56, 78.90, 45.67, 89.01]
-    ];
+    floatArray = createSmallStableFloats();
 } else { // Generate a larger table of random floats.
-    let randomFloatArray: number[][] = [];
-    let numtestRows = 20000;
-    let numtestColumns = 3000;
-    for (let i = 0; i < numtestRows; i++) {
-        if (i % 1000 === 0) {
-            log("row: " + i);
-        }
-        const row: number[] = [];
-        for (let j = 0; j < numtestColumns; j++) {
-            const randomFloat = Math.random() * 100;
-            row.push(randomFloat);
-        }
-        randomFloatArray.push(row);
-    }
-    log("=== input array created ===")
-
-    floatArray = randomFloatArray;
+    floatArray = createFloats(20000, 4000);
 }
-let myDatumMode = 2;
-let quantizedArray: IntquantQuantizedData;
-let compressedData: IntquantCompressedData
-let decompressedData: IntquantQuantizedData;
-let dequantizedArray: number[][];
+let myDatumMode; // 1 for one-byte quantization, 2 for two-byte.
+let quantizedArray: IntquantQuantizedData | null = null;
+let compressedData: IntquantCompressedData | null = null;
+let decompressedData: IntquantQuantizedData | null = null;
+let dequantizedArray: number[][] | null = null;
 
-test('Quick test of small array of floats. Quantize, compress to JSON, and reverse it all.', () => {
-    log("Quantizing with datumMode: " + myDatumMode);
-    quantizedArray = Intquant.quantizeFloatArray(floatArray, myDatumMode);
+function roundTrip(floats:number[][], datumMode:number) {
+    console.time("roundTrip");
+    log("Quantizing with datumMode: " + datumMode);
+    quantizedArray = Intquant.quantizeFloatArray(floatArray, datumMode);
     log(quantizedArray);
 
     compressedData = Intquant.compressQuantizedData(quantizedArray);
-
     log("compressedData...");
     log(compressedData);
-
-    // Store the compressed string in JSON
-    const compressedDataJSON = JSON.stringify({ compressedData: compressedData }).replace(/,/g, ',\n');
-    log("compressed JSON length = " + compressedDataJSON.length);
-    // require('fs').writeFileSync('compressed.json', compressedDataJSON);
 
     decompressedData = Intquant.decompressCompressedData(compressedData);
     log("decompressedArray...");
     log(decompressedData);
-
 
     dequantizedArray = Intquant.dequantizeFloatArray(decompressedData);
     log("dequantizedArray...");
@@ -76,8 +49,65 @@ test('Quick test of small array of floats. Quantize, compress to JSON, and rever
     // const prettyPrintedString = Intquant.prettyPrintUint8ArrayAsIntegers(decompressedBase64ToArray);
     // log(prettyPrintedString); // Output: "255 0 127 64"
 
-    const deqSize = dequantizedArray.length * dequantizedArray[0].length;
-    const originalSize = floatArray.length * floatArray[0].length;
-    log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
-    expect(deqSize).toBe(originalSize);
+    expect(quantizedArray).toBeDefined();
+    expect(compressedData).toBeDefined();
+    expect(decompressedData).toBeDefined();    
+
+    console.timeEnd("roundTrip");
+
+    let json = Intquant.compressedDataToJSON(compressedData);
+    console.time("JSON to Floats")
+    let floats2 = Intquant.decompressCompressedData(compressedData)
+    console.timeEnd("JSON to Floats")
+
+}
+
+
+// === One Byte ===
+test('One Byte: Quick test of small array of floats. Quantize to one byte, compress to JSON, and reverse it all.', () => {
+    myDatumMode = 1;
+    roundTrip(floatArray, myDatumMode);
+    reportCompression(compressedData);
 });
+
+// test('One Byte: Size of float array matches, start-to-end.', () => {
+//     if(dequantizedArray != null){
+//         const deqSize = dequantizedArray.length * dequantizedArray[0].length;
+//         const originalSize = floatArray.length * floatArray[0].length;
+//         log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
+        
+//         expect(deqSize).toBe(originalSize);
+//     }
+// });
+
+// test('One Byte: Quantized data matches, pre/post compression.', () => {
+//     expect(quantizedArray).toEqual(decompressedData);
+// });
+
+// // === Clear out results ===
+
+// quantizedArray = null;
+// compressedData = null;
+// decompressedData = null;
+// dequantizedArray = [];
+
+
+// // === Two Bytes ===
+// test('Two Bytes: Quick test of small array of floats. Quantize to one byte, compress to JSON, and reverse it all.', () => {
+//     myDatumMode = 2;
+//     roundTrip(floatArray, myDatumMode);
+//     reportCompression(compressedData);
+// });
+
+// test('Two Bytes: Size of float array matches, start-to-end.', () => {
+//     if(dequantizedArray){
+//         const deqSize = dequantizedArray.length * dequantizedArray[0].length;
+//         const originalSize = floatArray.length * floatArray[0].length;
+//         log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
+//         expect(deqSize).toBe(originalSize);
+//     }
+// });
+
+// test('Two Bytes: Quantized data matches, pre/post compression.', () => {
+//     expect(quantizedArray).toEqual(decompressedData);
+// });

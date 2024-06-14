@@ -4,22 +4,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Intquant = void 0;
 // import pako from 'pako';
 //import * as pako from 'pako';
-const pako = require('pako');
-class Intquant {
-    constructor() {
+var pako = require('pako');
+var Intquant = /** @class */ (function () {
+    function Intquant() {
         // Initialization if needed
     }
-    static quantizeFloatArray(floatArray, datumMode) {
+    Intquant.quantizeFloatArray = function (floatArray, datumMode) {
         // Find minimum and maximum values in the input array
-        let minValue = Infinity;
-        let maxValue = -Infinity;
-        let maxPossibleInt = 255; // 255 for one byte, 65535 for two bytes.
+        var minValue = Infinity;
+        var maxValue = -Infinity;
+        var maxPossibleInt = 255; // 255 for one byte, 65535 for two bytes.
         if (datumMode == 2) {
             maxPossibleInt = 65535;
         }
-        for (let i = 0; i < floatArray.length; i++) {
-            for (let j = 0; j < floatArray[i].length; j++) {
-                const value = floatArray[i][j];
+        for (var i = 0; i < floatArray.length; i++) {
+            for (var j = 0; j < floatArray[i].length; j++) {
+                var value = floatArray[i][j];
                 if (value < minValue) {
                     minValue = value;
                 }
@@ -29,71 +29,71 @@ class Intquant {
             }
         }
         // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
-        const intArray = [];
-        for (let i = 0; i < floatArray.length; i++) {
-            const row = [];
-            for (let j = 0; j < floatArray[i].length; j++) {
-                const floatValue = floatArray[i][j];
-                const compressedValue = Math.round((floatValue - minValue) / (maxValue - minValue) * maxPossibleInt);
+        var intArray = [];
+        for (var i = 0; i < floatArray.length; i++) {
+            var row = [];
+            for (var j = 0; j < floatArray[i].length; j++) {
+                var floatValue = floatArray[i][j];
+                var compressedValue = Math.round((floatValue - minValue) / (maxValue - minValue) * maxPossibleInt);
                 row.push(compressedValue);
             }
             intArray.push(row);
         }
-        let compressedData = {
+        var compressedData = {
             min: minValue,
             max: maxValue,
             datumMode: datumMode,
             data: intArray
         };
         return compressedData;
-    }
-    static dequantizeFloatArray(compressedData) {
-        const { min, max, data } = compressedData;
-        const decompressedArray = [];
-        let maxPossible = 255;
+    };
+    Intquant.dequantizeFloatArray = function (compressedData) {
+        var min = compressedData.min, max = compressedData.max, data = compressedData.data;
+        var decompressedArray = [];
+        var maxPossible = 255;
         if (compressedData.datumMode == 2) {
             maxPossible = 65535;
         }
-        for (let i = 0; i < data.length; i++) {
-            const row = [];
-            for (let j = 0; j < data[i].length; j++) {
-                const compressedValue = data[i][j];
-                const decompressedValue = (min + (compressedValue / maxPossible) * (max - min));
-                const roundedValue = Math.round(decompressedValue * 1000) / 1000; // 3 decimal places
+        for (var i = 0; i < data.length; i++) {
+            var row = [];
+            for (var j = 0; j < data[i].length; j++) {
+                var compressedValue = data[i][j];
+                var decompressedValue = (min + (compressedValue / maxPossible) * (max - min));
+                var roundedValue = Math.round(decompressedValue * 1000) / 1000; // 3 decimal places
                 row.push(roundedValue);
             }
             decompressedArray.push(row);
         }
         return decompressedArray;
-    }
-    static compressAndEncodeUint8Array(data) {
+    };
+    Intquant.compressAndEncodeUint8Array = function (data) {
         // Compress the binary data using zlib's deflate algorithm
-        const compressed = pako.deflate(data);
+        var compressed = pako.deflate(data);
         // Convert compressed binary data to Base64 string
-        const base64String = Buffer.from(compressed).toString('base64');
+        var base64String = Buffer.from(compressed).toString('base64');
         return base64String;
-    }
-    static compressQuantizedData(quantizedData) {
-        const { min, max, datumMode, data } = quantizedData;
-        const base64Data = [];
+    };
+    Intquant.compressQuantizedData = function (quantizedData) {
+        var min = quantizedData.min, max = quantizedData.max, datumMode = quantizedData.datumMode, data = quantizedData.data;
+        var base64Data = [];
         // Compress each row of data into a base64 string
-        for (let i = 0; i < data.length; i++) {
-            const row = data[i];
-            let rowUint8Array;
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var rowUint8Array = void 0;
             if (datumMode == 2) { // Convert to Uint8Array
                 rowUint8Array = new Uint8Array(row.length * 2);
-                for (let i = 0; i < row.length; i++) {
-                    rowUint8Array[i * 2] = row[i] & 0xFF;
-                    rowUint8Array[i * 2 + 1] = (row[i] >> 8) & 0xFF;
+                for (var i_1 = 0; i_1 < row.length; i_1++) {
+                    rowUint8Array[i_1 * 2] = row[i_1] & 0xFF;
+                    rowUint8Array[i_1 * 2 + 1] = (row[i_1] >> 8) & 0xFF;
                 }
             }
             else {
                 rowUint8Array = new Uint8Array(row);
             }
-            const base64String = Intquant.compressAndEncodeUint8Array(rowUint8Array);
+            var base64String = Intquant.compressAndEncodeUint8Array(rowUint8Array);
             base64Data.push(base64String);
         }
-        const compressedData = {
+        var compressedData = {
             min: min,
             max: max,
             numRows: data.length,
@@ -102,27 +102,30 @@ class Intquant {
             base64Data: base64Data
         };
         return compressedData;
-    }
-    static decodeAndDecompressBase64String(compressedString) {
+    };
+    Intquant.compressedDataToJSON = function (compressedData) {
+        return JSON.stringify({ compressedData: compressedData }).replace(/,/g, ',\n');
+    };
+    Intquant.decodeAndDecompressBase64String = function (compressedString) {
         // Decode Base64 string back to binary data
-        const compressedData = Buffer.from(compressedString, 'base64');
+        var compressedData = Buffer.from(compressedString, 'base64');
         // Decompress the data using pako's inflate function
-        const decompressedData = pako.inflate(compressedData);
+        var decompressedData = pako.inflate(compressedData);
         // Convert decompressed ArrayBuffer to Uint8Array
         return new Uint8Array(decompressedData);
-    }
-    static decompressCompressedData(compressedData) {
-        const { min, max, numRows, numColumns, datumMode, base64Data } = compressedData;
-        const data = [];
-        for (let i = 0; i < base64Data.length; i++) {
-            const rowBase64 = base64Data[i];
-            const rowUint8Array = Intquant.decodeAndDecompressBase64String(rowBase64);
-            let rowIntegers = [];
+    };
+    Intquant.decompressCompressedData = function (compressedData) {
+        var min = compressedData.min, max = compressedData.max, numRows = compressedData.numRows, numColumns = compressedData.numColumns, datumMode = compressedData.datumMode, base64Data = compressedData.base64Data;
+        var data = [];
+        for (var i = 0; i < base64Data.length; i++) {
+            var rowBase64 = base64Data[i];
+            var rowUint8Array = Intquant.decodeAndDecompressBase64String(rowBase64);
+            var rowIntegers = [];
             if (datumMode == 2) {
                 // Convert back to array of two-byte unsigned integers
                 rowIntegers = [];
-                for (let i = 0; i < rowUint8Array.length; i += 2) {
-                    rowIntegers.push(rowUint8Array[i] + (rowUint8Array[i + 1] << 8));
+                for (var i_2 = 0; i_2 < rowUint8Array.length; i_2 += 2) {
+                    rowIntegers.push(rowUint8Array[i_2] + (rowUint8Array[i_2 + 1] << 8));
                 }
             }
             else {
@@ -130,17 +133,18 @@ class Intquant {
             }
             data.push(rowIntegers);
         }
-        const decompressedData = {
+        var decompressedData = {
             min: min,
             max: max,
             datumMode: datumMode,
             data: data
         };
         return decompressedData;
-    }
-    static prettyPrintUint8ArrayAsIntegers(array, separator = ' ') {
+    };
+    Intquant.prettyPrintUint8ArrayAsIntegers = function (array, separator) {
+        if (separator === void 0) { separator = ' '; }
         return Array.from(array).join(separator);
-    }
-}
+    };
+    return Intquant;
+}());
 exports.Intquant = Intquant;
-//# sourceMappingURL=Intquant.js.map
