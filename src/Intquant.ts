@@ -79,14 +79,12 @@ export class Intquant {
             //case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
 
             case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
-                console.log("Processing Float32Array[]");
                 for (var i = 0; i < floatArray.length; i++) {
                     let row:Float32Array = floatArray[i] as Float32Array;
                     const min = row.reduce((a: number, b: number) => Math.min(a, b));
                     const max = row.reduce((a: number, b: number) => Math.max(a, b));
                     [minValue, maxValue] = [Math.min(minValue, min), Math.max(maxValue, max)];
                 }
-                console.log("Float32Array  min: ", minValue, "max: ", maxValue);
 
                 // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
                 for (var i = 0; i < floatArray.length; i++) {

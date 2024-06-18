@@ -50,14 +50,12 @@ var Intquant = /** @class */ (function () {
                 break;
             //case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
             case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
-                console.log("Processing Float32Array[]");
                 for (var i = 0; i < floatArray.length; i++) {
                     var row_2 = floatArray[i];
                     var min = row_2.reduce(function (a, b) { return Math.min(a, b); });
                     var max = row_2.reduce(function (a, b) { return Math.max(a, b); });
                     _b = [Math.min(minValue, min), Math.max(maxValue, max)], minValue = _b[0], maxValue = _b[1];
                 }
-                console.log("Float32Array  min: ", minValue, "max: ", maxValue);
                 // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
                 for (var i = 0; i < floatArray.length; i++) {
                     var row = [];

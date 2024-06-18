@@ -1,5 +1,10 @@
 import { Intquant, IntquantQuantizedData, IntquantCompressedData } from '../src/Intquant';
 
+export function summarize2DArray(arr: number[][] | Float32Array[], previewLength: number = 2): string  {
+    const preview = (row: number[] | Float32Array) =>
+        `${Array.from(row.slice(0, previewLength)).join(', ')}${row.length > previewLength * 2 ? ', ...,' : ''}${Array.from(row.slice(-previewLength)).join(', ')}`;
+    return "Array partial summary.......\n" + arr.map(preview).join('\n');
+};
 export function createSmallStableFloats(): number[][] {
     return [
         [1.0023, 45.67, 89.01, 12.3456, 56.78],

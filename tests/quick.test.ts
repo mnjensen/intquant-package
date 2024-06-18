@@ -1,6 +1,6 @@
 import { Intquant, IntquantQuantizedData, IntquantCompressedData  } from '../src/Intquant';
 // src/Main.ts
-import { createFloats, createSmallStableFloats, reportCompression } from './testutils';
+import { createFloats, createSmallStableFloats, reportCompression, summarize2DArray } from './testutils';
 
 // Be sure to use a variety of value forms. e.g., "3.4", "0.004", "123.4", "43.02".
 
@@ -41,19 +41,19 @@ function roundTrip(floats: number[][] | Float32Array[], datumMode:number) {
     console.time("roundTrip");
     log("Quantizing with datumMode: " + datumMode);
     quantizedArray = Intquant.quantizeFloatArray(floats, datumMode);
-    log(quantizedArray);
+    log(summarize2DArray(quantizedArray.data, 3));
 
     compressedData = Intquant.compressQuantizedData(quantizedArray);
-    log("compressedData...");
-    log(compressedData);
+    // log("compressedData...");
+    // log(compressedData);
 
     decompressedData = Intquant.decompressCompressedData(compressedData);
-    log("decompressedArray...");
-    log(decompressedData);
+    // log("decompressedArray...");
+    // log(decompressedData);
 
     dequantizedArray = Intquant.dequantizeFloatArray(decompressedData);
     log("dequantizedArray...");
-    log(dequantizedArray);
+    log(summarize2DArray(dequantizedArray, 3));
 
     expect(quantizedArray).toBeDefined();
     expect(compressedData).toBeDefined();
@@ -65,14 +65,13 @@ function roundTrip(floats: number[][] | Float32Array[], datumMode:number) {
 
 
 // === One Byte ===
-test('One Byte: Quick test of small array of floats. Quantize to one byte, compress to JSON, and reverse it all.', () => {
+test('One Byte: Quick test of array of floats. Quantize to one byte per float, compress to JSON, and reverse it all.', () => {
     myDatumMode = 2;
     roundTrip(floatArray, myDatumMode);
     reportCompression(compressedData);
     expect(quantizedArray).toBeDefined();
 
     float32Array = Intquant.convertNumbersToFloat32Array(floatArray);
-    log("Before second half of test, float32Array: " + float32Array);
     roundTrip(float32Array, myDatumMode);
     log("One-byte test of Float32Array[] is finished.");
     reportCompression(compressedData);
@@ -80,44 +79,44 @@ test('One Byte: Quick test of small array of floats. Quantize to one byte, compr
     expect(quantizedArray).toBeDefined();
 });
 
-// test('One Byte: Size of float array matches, start-to-end.', () => {
-//     if(dequantizedArray != null){
-//         const deqSize = dequantizedArray.length * dequantizedArray[0].length;
-//         const originalSize = floatArray.length * floatArray[0].length;
-//         log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
+test('One Byte: Size of float array matches, start-to-end.', () => {
+    if(dequantizedArray != null){
+        const deqSize = dequantizedArray.length * dequantizedArray[0].length;
+        const originalSize = floatArray.length * floatArray[0].length;
+        log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
         
-//         expect(deqSize).toBe(originalSize);
-//     }
-// });
+        expect(deqSize).toBe(originalSize);
+    }
+});
 
-// test('One Byte: Quantized data matches, pre/post compression.', () => {
-//     expect(quantizedArray).toEqual(decompressedData);
-// });
+test('One Byte: Quantized data matches, pre/post compression.', () => {
+    expect(quantizedArray).toEqual(decompressedData);
+});
 
-// // === Clear out results ===
+// === Clear out results ===
 
-// quantizedArray = null;
-// compressedData = null;
-// decompressedData = null;
-// dequantizedArray = [];
+quantizedArray = null;
+compressedData = null;
+decompressedData = null;
+dequantizedArray = [];
 
 
-// // === Two Bytes ===
-// test('Two Bytes: Quick test of small array of floats. Quantize to one byte, compress to JSON, and reverse it all.', () => {
-//     myDatumMode = 2;
-//     roundTrip(floatArray, myDatumMode);
-//     reportCompression(compressedData);
-// });
+// === Two Bytes ===
+test('Two Bytes: Quick test of array of floats. Quantize to two bytes per float, compress to JSON, and reverse it all.', () => {
+    myDatumMode = 2;
+    roundTrip(floatArray, myDatumMode);
+    reportCompression(compressedData);
+});
 
-// test('Two Bytes: Size of float array matches, start-to-end.', () => {
-//     if(dequantizedArray){
-//         const deqSize = dequantizedArray.length * dequantizedArray[0].length;
-//         const originalSize = floatArray.length * floatArray[0].length;
-//         log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
-//         expect(deqSize).toBe(originalSize);
-//     }
-// });
+test('Two Bytes: Size of float array matches, start-to-end.', () => {
+    if(dequantizedArray){
+        const deqSize = dequantizedArray.length * dequantizedArray[0].length;
+        const originalSize = floatArray.length * floatArray[0].length;
+        log("deqSize: " + deqSize + ",  originalSize: " + originalSize);
+        expect(deqSize).toBe(originalSize);
+    }
+});
 
-// test('Two Bytes: Quantized data matches, pre/post compression.', () => {
-//     expect(quantizedArray).toEqual(decompressedData);
-// });
+test('Two Bytes: Quantized data matches, pre/post compression.', () => {
+    expect(quantizedArray).toEqual(decompressedData);
+});
