@@ -7,6 +7,11 @@ import { createFloats, createSmallStableFloats, reportCompression } from './test
 const args = process.argv;
 const verboseOption = args.find(arg => arg.startsWith('--verbose='));
 const verbose:boolean = verboseOption ? verboseOption.split('=')[1]=="true" : false;
+const rowsOption = args.find(arg => arg.startsWith('--rows='));
+const testRows: number = rowsOption ? parseInt(rowsOption.split('=')[1], 10) : 10;
+const colsOption = args.find(arg => arg.startsWith('--cols='));
+const testCols: number = colsOption ? parseInt(colsOption.split('=')[1], 10) : 12;
+
 function log(...args: any[]): void {
     if(verbose){
         console.log(...args);
@@ -15,23 +20,27 @@ function log(...args: any[]): void {
 
 // ====== Example data ======
 let floatArray: number[][] = [];
+let float32Array: Float32Array[] = [];
 
+// ====== Test data ======
+// Small test array gives us a known, stable set of floats, not randoms.
 let useSmallTestArray = false;
 if (useSmallTestArray) {
     floatArray = createSmallStableFloats();
 } else { // Generate a larger table of random floats.
-    floatArray = createFloats(20000, 4000);
+    floatArray = createFloats(testRows, testCols);
 }
+
 let myDatumMode; // 1 for one-byte quantization, 2 for two-byte.
 let quantizedArray: IntquantQuantizedData | null = null;
 let compressedData: IntquantCompressedData | null = null;
 let decompressedData: IntquantQuantizedData | null = null;
-let dequantizedArray: number[][] | null = null;
+let dequantizedArray: number[][] | Float32Array[] | null = null;
 
-function roundTrip(floats:number[][], datumMode:number) {
+function roundTrip(floats: number[][] | Float32Array[], datumMode:number) {
     console.time("roundTrip");
     log("Quantizing with datumMode: " + datumMode);
-    quantizedArray = Intquant.quantizeFloatArray(floatArray, datumMode);
+    quantizedArray = Intquant.quantizeFloatArray(floats, datumMode);
     log(quantizedArray);
 
     compressedData = Intquant.compressQuantizedData(quantizedArray);
@@ -46,28 +55,29 @@ function roundTrip(floats:number[][], datumMode:number) {
     log("dequantizedArray...");
     log(dequantizedArray);
 
-    // const prettyPrintedString = Intquant.prettyPrintUint8ArrayAsIntegers(decompressedBase64ToArray);
-    // log(prettyPrintedString); // Output: "255 0 127 64"
-
     expect(quantizedArray).toBeDefined();
     expect(compressedData).toBeDefined();
     expect(decompressedData).toBeDefined();    
 
     console.timeEnd("roundTrip");
 
-    let json = Intquant.compressedDataToJSON(compressedData);
-    console.time("JSON to Floats")
-    let floats2 = Intquant.decompressCompressedData(compressedData)
-    console.timeEnd("JSON to Floats")
-
 }
 
 
 // === One Byte ===
 test('One Byte: Quick test of small array of floats. Quantize to one byte, compress to JSON, and reverse it all.', () => {
-    myDatumMode = 1;
+    myDatumMode = 2;
     roundTrip(floatArray, myDatumMode);
     reportCompression(compressedData);
+    expect(quantizedArray).toBeDefined();
+
+    float32Array = Intquant.convertNumbersToFloat32Array(floatArray);
+    log("Before second half of test, float32Array: " + float32Array);
+    roundTrip(float32Array, myDatumMode);
+    log("One-byte test of Float32Array[] is finished.");
+    reportCompression(compressedData);
+
+    expect(quantizedArray).toBeDefined();
 });
 
 // test('One Byte: Size of float array matches, start-to-end.', () => {

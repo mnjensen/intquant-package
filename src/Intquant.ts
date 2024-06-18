@@ -9,6 +9,7 @@ export interface IntquantQuantizedData {
     min: number;
     max: number;
     datumMode: number; // 1 for 1-byte (0-255), 2 for 2-byte (0-65535)
+    originalForm: 'numbers' | 'float32';
     data: number[][];
 }
 
@@ -22,6 +23,7 @@ export interface IntquantCompressedData {
     numRows: number;
     numColumns: number;
     datumMode: number; // 1 for 1-byte (0-255), 2 for 2-byte (0-65535)
+    originalForm: 'numbers' | 'float32';
     base64Data: string[];
 }
 
@@ -30,50 +32,92 @@ export class Intquant {
         // Initialization if needed
     }
 
-    static quantizeFloatArray(floatArray: number[][], datumMode: number): IntquantQuantizedData {
+    static convertNumbersToFloat32Array = (arr: number[][]): Float32Array[] => arr.map(row => new Float32Array(row));
+    static convertFloat32ArrayToNumbers = (arr: Float32Array[]): number[][] => arr.map(row => Array.from(row));
+
+    static quantizeFloatArray(floatArray: number[][] | Float32Array[], datumMode: number): IntquantQuantizedData {
         // Find minimum and maximum values in the input array
         let minValue = Infinity;
         let maxValue = -Infinity;
+        let originalForm: 'numbers' | 'float32' = 'numbers';
 
         let maxPossibleInt = 255;  // 255 for one byte, 65535 for two bytes.
         if (datumMode == 2) {
             maxPossibleInt = 65535;
         }
 
-        for (let i = 0; i < floatArray.length; i++) {
-            for (let j = 0; j < floatArray[i].length; j++) {
-                const value = floatArray[i][j];
-                if (value < minValue) {
-                    minValue = value;
+        const intArray: number[][] = [];
+        switch (true) {
+            case floatArray instanceof Array && floatArray[0] instanceof Array && typeof floatArray[0][0] === 'number':
+                // for (let i = 0; i < floatArray.length; i++) {
+                //     for (let j = 0; j < floatArray[i].length; j++) {
+                //         const value = floatArray[i][j];
+                //         if (value < minValue) {
+                //             minValue = value;
+                //         }
+                //         if (value > maxValue) {
+                //             maxValue = value;
+                //         }
+                //     }
+                // }
+                [minValue, maxValue] = (floatArray as number[][]).flat().reduce(([minValue, maxValue], val) => [Math.min(minValue, val), Math.max(maxValue, val)], [Infinity, -Infinity]);
+
+
+                // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
+                for (let i = 0; i < floatArray.length; i++) {
+                    const row: number[] = [];
+                    for (let j = 0; j < floatArray[i].length; j++) {
+                        const floatValue = floatArray[i][j];
+                        const compressedValue = Math.round((floatValue - minValue) / (maxValue - minValue) * maxPossibleInt);
+                        row.push(compressedValue);
+                    }
+                    intArray.push(row);
                 }
-                if (value > maxValue) {
-                    maxValue = value;
+
+                break;
+
+            //case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
+
+            case floatArray instanceof Array && floatArray[0] instanceof Float32Array:
+                console.log("Processing Float32Array[]");
+                for (var i = 0; i < floatArray.length; i++) {
+                    let row:Float32Array = floatArray[i] as Float32Array;
+                    const min = row.reduce((a: number, b: number) => Math.min(a, b));
+                    const max = row.reduce((a: number, b: number) => Math.max(a, b));
+                    [minValue, maxValue] = [Math.min(minValue, min), Math.max(maxValue, max)];
                 }
-            }
+                console.log("Float32Array  min: ", minValue, "max: ", maxValue);
+
+                // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
+                for (var i = 0; i < floatArray.length; i++) {
+                    var row = [];
+                    for (var j = 0; j < floatArray[i].length; j++) {
+                        var floatValue = floatArray[i][j];
+
+                        var compressedValue = Math.round((floatValue - minValue) / (maxValue - minValue) * maxPossibleInt);
+                        row.push(compressedValue);
+                    }
+                    intArray.push(row);
+                }
+
+                break;
+
+            default:
+                throw new Error("Unsupported array type");
         }
 
-        // Linearly scale each value to map it to an integer output value between 0 and maxPossibleInt
-        const intArray: number[][] = [];
-        for (let i = 0; i < floatArray.length; i++) {
-            const row: number[] = [];
-            for (let j = 0; j < floatArray[i].length; j++) {
-                const floatValue = floatArray[i][j];
-                const compressedValue = Math.round((floatValue - minValue) / (maxValue - minValue) * maxPossibleInt);
-                row.push(compressedValue);
-            }
-            intArray.push(row);
-        }
 
         let compressedData: IntquantQuantizedData = {
             min: minValue,
             max: maxValue,
             datumMode: datumMode,
+            originalForm: originalForm,
             data: intArray
         }
         return compressedData;
     }
 
-    static dequantizeFloatArray(compressedData: IntquantQuantizedData): number[][] {
+    static dequantizeFloatArray(compressedData: IntquantQuantizedData): number[][] | Float32Array[] {
         const { min, max, data } = compressedData;
         const decompressedArray: number[][] = [];
         let maxPossible = 255;
@@ -105,7 +149,7 @@ export class Intquant {
     }
 
     static compressQuantizedData(quantizedData: IntquantQuantizedData): IntquantCompressedData {
-        const { min, max, datumMode, data } = quantizedData;
+        const { min, max, datumMode, originalForm, data } = quantizedData;
         const base64Data: string[] = [];
         // Compress each row of data into a base64 string
         for (let i = 0; i < data.length; i++) {
@@ -130,6 +174,7 @@ export class Intquant {
             numRows: data.length,
             numColumns: data[0].length,
             datumMode: datumMode,
+            originalForm: originalForm,
             base64Data: base64Data
         }
         return compressedData;
@@ -149,7 +194,7 @@ export class Intquant {
     }
 
     static decompressCompressedData(compressedData: IntquantCompressedData): IntquantQuantizedData {
-        const { min, max, numRows, numColumns, datumMode, base64Data } = compressedData;
+        const { min, max, numRows, numColumns, datumMode, originalForm, base64Data } = compressedData;
         const data: number[][] = [];
         for (let i = 0; i < base64Data.length; i++) {
             const rowBase64 = base64Data[i];
@@ -172,6 +217,7 @@ export class Intquant {
             min: min,
             max: max,
             datumMode: datumMode,
+            originalForm: originalForm,
             data: data
         }
         return decompressedData;
