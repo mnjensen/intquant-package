@@ -13,5 +13,7 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc -p tsconfig.tests.json && jest"
-  }
+  },
+  "name": "intquant",
+  "version": "0.1.1"
 }

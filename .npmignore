@@ -3,3 +3,8 @@ tests
 node_modules
 tsconfig.json
 jest.config.js
+launch.json
+eslintrc.js
+tsconfig.base.json
+tsconfig.build.json
+tsconfig.tests.json
